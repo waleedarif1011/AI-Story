@@ -1,0 +1,15 @@
+# CPU-friendly inference + demo (CI / local / HF Space)
+numpy>=2.0,<3
+torch>=2.2,<3
+transformers>=4.40,<5
+accelerate>=0.30,<2
+peft>=0.11,<0.14
+sentencepiece>=0.2,<0.3
+protobuf>=4.25,<6
+pyarrow>=15,<27
+gradio>=4.44,<6
+pytest>=8.0,<9
+
+# Training data loader (also used by src/train_lora.py)
+# Optional CUDA / Colab: pip install "unsloth[colab-new]"
+datasets>=2.19,<4
