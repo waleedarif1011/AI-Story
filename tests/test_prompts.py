@@ -199,3 +199,51 @@ def test_build_prompt_used_by_app_generate_path():
         )
     assert "Findings:" in prompt
     assert "Generation failed" in story
+
+
+def test_blank_adapter_env_uses_base_model_only():
+    """Space/local boot must not require Drive or a private adapter."""
+    import app as app_mod
+    from src.inference import DEFAULT_MODEL_ID
+
+    app_mod.get_generator.cache_clear()
+    captured: dict[str, object] = {}
+
+    class _FakeGen:
+        def __init__(self, model_id=None, adapter_path=None):
+            captured["model_id"] = model_id
+            captured["adapter_path"] = adapter_path
+
+    with (
+        patch.dict("os.environ", {"AI_STORY_ADAPTER": "   ", "AI_STORY_MODEL_ID": ""}, clear=False),
+        patch("app.StoryGenerator", _FakeGen),
+    ):
+        app_mod.get_generator()
+
+    assert captured["adapter_path"] is None
+    assert captured["model_id"] == DEFAULT_MODEL_ID
+    app_mod.get_generator.cache_clear()
+
+
+def test_readme_does_not_advertise_missing_space():
+    """Without a published Space, README must not claim a live HF demo URL."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "Not published yet" in readme
+    assert "assets/data-to-story-demo.png" in readme
+    # Badge must not deep-link a 404 Space while undeployed.
+    assert "badge/🤗%20Live%20Demo" not in readme
+
+
+def test_notebook_defaults_to_sample_jsonl():
+    """Colab notebook must default to committed sample, not Google Drive."""
+    nb = json.loads((ROOT / "fine_tune_flan_t5_base.ipynb").read_text(encoding="utf-8"))
+    sources = "\n".join("".join(cell.get("source", [])) for cell in nb["cells"])
+    assert "data/sample_ds_stories.jsonl" in sources
+    assert "/content/drive/MyDrive/A_Manual_Dataset" not in sources
+
+
+def test_cpu_latency_note_exposed_in_app():
+    from app import CPU_LATENCY_NOTE
+
+    assert "5–20" in CPU_LATENCY_NOTE
+    assert "Google Drive" in CPU_LATENCY_NOTE

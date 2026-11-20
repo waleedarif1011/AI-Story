@@ -12,20 +12,22 @@ license: mit
 
 # ai-story — Data Science Findings → Human Narratives
 
-[![Live Demo](https://img.shields.io/badge/🤗%20Live%20Demo-Hugging%20Face%20Space-yellow)](https://huggingface.co/spaces/waleedarif1011/ai-story)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/waleedarif1011/ai-story/blob/main/fine_tune_flan_t5_base.ipynb)
 [![CI](https://github.com/waleedarif1011/ai-story/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedarif1011/ai-story/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Fine-tune **Flan-T5-base** with LoRA to turn structured data-science outputs
 (metrics, A/B results, EDA summaries) into clear executive narratives — then
-serve them from a CPU Gradio demo.
+serve them from a CPU Gradio demo that boots on the **public base model** (no
+private Google Drive files).
+
+![Data-to-Story Generator — churn preset with side-by-side prompt](assets/data-to-story-demo.png)
 
 ## Try live inference
 
 | Mode | How |
 |------|-----|
-| **Hugging Face Space** | [Live Data-to-Story Generator](https://huggingface.co/spaces/waleedarif1011/ai-story) *(deploy steps in [`docs/hf-space-deploy.md`](docs/hf-space-deploy.md) if the Space is not live yet)* |
+| **Hugging Face Space** | *Not published yet* — no `HF_TOKEN` in this environment. Deploy with [`docs/hf-space-deploy.md`](docs/hf-space-deploy.md); the Live Demo badge will land here once the Space exists. |
 | **Local Gradio** | `pip install -r requirements.txt && python app.py` |
 
 The demo ships four presets: **Churn model results**, **Revenue anomaly**,
@@ -33,13 +35,16 @@ The demo ships four presets: **Churn model results**, **Revenue anomaly**,
 (Executive summary / Technical report / Stakeholder update) and inspect the
 structured prompt next to the generated story.
 
-Optional LoRA adapter: set `AI_STORY_ADAPTER` to a local path or Hub repo ID.
+**CPU latency (honest):** first boot downloads public `google/flan-t5-base`
+(~900MB). After load, expect roughly **5–20 seconds per story** on Space CPU
+basic / a typical laptop. Optional LoRA: set `AI_STORY_ADAPTER` to a local path
+or **public** Hub repo ID (never required for boot).
 
 ## Fine-tune your own adapter
 
 | Mode | How |
 |------|-----|
-| **Colab notebook** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/waleedarif1011/ai-story/blob/main/fine_tune_flan_t5_base.ipynb) — [`fine_tune_flan_t5_base.ipynb`](fine_tune_flan_t5_base.ipynb) |
+| **Colab notebook** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/waleedarif1011/ai-story/blob/main/fine_tune_flan_t5_base.ipynb) — [`fine_tune_flan_t5_base.ipynb`](fine_tune_flan_t5_base.ipynb) defaults to the committed sample JSONL |
 | **Local CLI** | `python -m src.train_lora --data data/sample_ds_stories.jsonl --epochs 3` |
 
 ```bash
@@ -53,7 +58,8 @@ LoRA defaults match the notebook: `r=8`, `alpha=16`, targets `q/k/v`, task `SEQ_
 ## Sample dataset (no Google Drive)
 
 Committed sample: [`data/sample_ds_stories.jsonl`](data/sample_ds_stories.jsonl)
-— **25** curated pairs. Schema:
+— **25** curated pairs. The notebook and `src/train_lora.py` both default here;
+override with `DATASET_PATH` / `--data` only if you have a larger private file.
 
 | Field | Description |
 |-------|-------------|
@@ -72,7 +78,8 @@ Committed sample: [`data/sample_ds_stories.jsonl`](data/sample_ds_stories.jsonl)
 ## Repository layout
 
 ```
-app.py                      # Gradio Data-to-Story Generator
+app.py                      # Gradio Data-to-Story Generator (Drive-free boot)
+assets/data-to-story-demo.png
 data/sample_ds_stories.jsonl
 src/prompts.py              # Instruction prompt templates
 src/inference.py            # CPU Flan-T5 (+ optional LoRA) generation
@@ -96,4 +103,5 @@ tests are mocked so CI stays CPU-light and does not download model weights.
 
 Base Flan-T5 without a task-specific adapter produces generic paraphrases.
 Fine-tune on your own JSONL (or the sample file) for domain voice. Narrative
-quality scales with dataset size and diversity.
+quality scales with dataset size and diversity. Space cold-start downloads the
+public base weights; keep adapters optional and public if you publish one.

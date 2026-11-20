@@ -1,8 +1,9 @@
 """
 Data-to-Story Generator — Gradio demo (CPU-friendly Flan-T5-base).
 
-Hugging Face Space entrypoint. Set ``AI_STORY_ADAPTER`` to a local path or Hub
-repo ID to load a LoRA adapter on top of google/flan-t5-base.
+Hugging Face Space entrypoint. Boots on public ``google/flan-t5-base`` with no
+private Google Drive files. Optionally set ``AI_STORY_ADAPTER`` to a local path
+or public Hub LoRA repo ID.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from typing import Optional, Tuple
 
 import gradio as gr
 
-from src.inference import GenerationConfig, StoryGenerator
+from src.inference import DEFAULT_MODEL_ID, GenerationConfig, StoryGenerator
 from src.prompts import TONES, build_prompt
 
 PRESETS: dict[str, str] = {
@@ -35,11 +36,22 @@ PRESETS: dict[str, str] = {
     ),
 }
 
+# Honest CPU expectations for Space / laptop demos (beam search on Flan-T5-base).
+CPU_LATENCY_NOTE = (
+    "**CPU latency (honest):** first boot downloads public "
+    f"`{DEFAULT_MODEL_ID}` weights (~900MB). After load, expect roughly "
+    "**5–20 seconds per story** on Hugging Face Space CPU basic / a typical laptop. "
+    "No private Google Drive files are required — the demo runs on the base model "
+    "unless you set `AI_STORY_ADAPTER` to a public Hub adapter."
+)
+
 
 @lru_cache(maxsize=1)
 def get_generator() -> StoryGenerator:
-    adapter = os.environ.get("AI_STORY_ADAPTER") or None
-    return StoryGenerator(adapter_path=adapter)
+    """Lazy-load base Flan-T5 (+ optional public/local adapter). Drive-free."""
+    adapter = (os.environ.get("AI_STORY_ADAPTER") or "").strip() or None
+    model_id = (os.environ.get("AI_STORY_MODEL_ID") or "").strip() or DEFAULT_MODEL_ID
+    return StoryGenerator(model_id=model_id, adapter_path=adapter)
 
 
 def apply_preset(name: str) -> str:
@@ -78,10 +90,12 @@ def generate(
 def build_ui() -> gr.Blocks:
     with gr.Blocks(title="Data-to-Story Generator") as demo:
         gr.Markdown(
-            """
+            f"""
             # Data-to-Story Generator
             Turn structured data-science findings into clear executive narratives.
-            Powered by **google/flan-t5-base** (CPU) with optional LoRA adapters.
+            Powered by **{DEFAULT_MODEL_ID}** (CPU) with optional public LoRA adapters.
+
+            {CPU_LATENCY_NOTE}
             """
         )
         with gr.Row():
