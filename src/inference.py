@@ -1,4 +1,9 @@
-"""CPU-friendly Flan-T5 inference for data-science → narrative generation."""
+"""CPU-friendly Flan-T5 inference for data-science → narrative generation.
+
+Default path loads public ``google/flan-t5-base`` only — no Google Drive or
+private artifacts required. Pass ``adapter_path`` (local dir or public Hub ID)
+only when you want a LoRA overlay.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +24,7 @@ class GenerationConfig:
 
 
 class StoryGenerator:
-    """Load ``google/flan-t5-base`` (optionally with a LoRA adapter) and generate narratives."""
+    """Load public Flan-T5-base (optionally with a LoRA adapter) and generate narratives."""
 
     def __init__(
         self,
@@ -30,17 +35,20 @@ class StoryGenerator:
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
+        # Treat blank / whitespace adapter env values as "base model only".
+        cleaned_adapter = (adapter_path or "").strip() or None
+
         self.model_id = model_id
-        self.adapter_path = adapter_path
+        self.adapter_path = cleaned_adapter
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
 
-        if adapter_path:
+        if cleaned_adapter:
             from peft import PeftModel
 
-            model = PeftModel.from_pretrained(model, adapter_path)
+            model = PeftModel.from_pretrained(model, cleaned_adapter)
 
         self.model = model.to(self.device)
         self.model.eval()
