@@ -1,82 +1,99 @@
-# 🚀 Fine-Tuning Flan-T5 for Data Science Narrative Generation
-
-> "Transforming complex data science results into compelling human stories."
-
-This repository provides a Google Colab notebook for fine-tuning the Flan-T5-base language model to generate human-readable narratives from complex data science outputs.
-
+---
+title: Data-to-Story Generator
+emoji: 📖
+colorFrom: blue
+colorTo: green
+sdk: gradio
+sdk_version: 4.44.0
+app_file: app.py
+pinned: false
+license: mit
 ---
 
-## 📖 Project Overview
+# ai-story — Data Science Findings → Human Narratives
 
-The goal of this project is to bridge the gap between technical data science outputs and accessible human language. By fine-tuning a powerful language model like Flan-T5, we enable the automatic translation of data analysis findings into engaging, understandable narratives.
+[![Live Demo](https://img.shields.io/badge/🤗%20Live%20Demo-Hugging%20Face%20Space-yellow)](https://huggingface.co/spaces/waleedarif1011/ai-story)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/waleedarif1011/ai-story/blob/main/fine_tune_flan_t5_base.ipynb)
+[![CI](https://github.com/waleedarif1011/ai-story/actions/workflows/ci.yml/badge.svg)](https://github.com/waleedarif1011/ai-story/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
----
+Fine-tune **Flan-T5-base** with LoRA to turn structured data-science outputs
+(metrics, A/B results, EDA summaries) into clear executive narratives — then
+serve them from a CPU Gradio demo.
 
-## 🛠️ Fine-Tuning Workflow
+## Try live inference
 
-The fine-tuning process is detailed in [`fine_tune_flan-t5-base.ipynb`](fine_tune_flan-t5-base.ipynb) and includes:
+| Mode | How |
+|------|-----|
+| **Hugging Face Space** | [Live Data-to-Story Generator](https://huggingface.co/spaces/waleedarif1011/ai-story) *(deploy steps in [`docs/hf-space-deploy.md`](docs/hf-space-deploy.md) if the Space is not live yet)* |
+| **Local Gradio** | `pip install -r requirements.txt && python app.py` |
 
-1. **Environment Setup**
-   - Install required libraries: `unsloth`, `datasets`, `transformers`, `accelerate`.
-2. **System Compatibility Check**
-   - Verify CUDA availability, PyTorch, and Transformers versions.
-3. **Dataset Loading & Preprocessing**
-   - Load dataset from `/content/drive/MyDrive/A_Manual_Dataset/DataScience_results_with_humanly.json`.
-   - Convert data for Hugging Face `datasets`.
-   - Split into training and validation sets.
-4. **Model & Tokenizer Loading**
-   - Load pre-trained `google/flan-t5-base` model and tokenizer.
-5. **Tokenization & Label Creation**
-   - Tokenize data science results and target narratives.
-   - Create the required `labels` column.
-6. **Parameter-Efficient Fine-Tuning (PEFT) with LoRA**
-   - Configure and apply LoRA for efficient fine-tuning.
-7. **Training Arguments Setup**
-   - Define hyperparameters and configuration using `TrainingArguments`.
-8. **Training Initialization**
-   - Set up Hugging Face `Trainer` with PEFT model, arguments, and datasets.
-   - Start training.
-9. **Model Saving**
-   - Save trained LoRA adapters and tokenizer for future use.
-10. **Model Loading**
-    - Load base model and apply saved LoRA adapters to reconstruct the fine-tuned model.
-11. **Model Testing**
-    - Use the fine-tuned model to generate narratives from new data science results.
+The demo ships four presets: **Churn model results**, **Revenue anomaly**,
+**A/B checkout test**, and **Quarterly forecast**. Choose a tone
+(Executive summary / Technical report / Stakeholder update) and inspect the
+structured prompt next to the generated story.
 
----
+Optional LoRA adapter: set `AI_STORY_ADAPTER` to a local path or Hub repo ID.
 
-## 📂 Dataset
+## Fine-tune your own adapter
 
-- **Format:** JSON file containing pairs of:
-  - `"complex_data_science_result"`
-  - `"human_storytelling_narrative"`
+| Mode | How |
+|------|-----|
+| **Colab notebook** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/waleedarif1011/ai-story/blob/main/fine_tune_flan_t5_base.ipynb) — [`fine_tune_flan_t5_base.ipynb`](fine_tune_flan_t5_base.ipynb) |
+| **Local CLI** | `python -m src.train_lora --data data/sample_ds_stories.jsonl --epochs 3` |
 
----
+```bash
+pip install -r requirements.txt
+python -m src.train_lora --output-dir adapters/flan-t5-base-lora
+python -m src.inference "AUC=0.87; lift +31%" --adapter adapters/flan-t5-base-lora
+```
 
-## ▶️ How to Run
+LoRA defaults match the notebook: `r=8`, `alpha=16`, targets `q/k/v`, task `SEQ_2_SEQ_LM`.
 
-1. Open the notebook in Google Colab.
-2. Click on "Runtime" in the menu and select "Change runtime type".
-3. Add path of your own dataset
-4. Run the cells sequentially to:
-   - Install dependencies
-   - Process data
-   - Configure and train the model
-   - Test the results
+## Sample dataset (no Google Drive)
 
----
+Committed sample: [`data/sample_ds_stories.jsonl`](data/sample_ds_stories.jsonl)
+— **25** curated pairs. Schema:
 
-## ⚠️ Limitations & Future Work
+| Field | Description |
+|-------|-------------|
+| `complex_data_science_result` | Structured metrics / EDA / experiment summary |
+| `human_storytelling_narrative` | Executive-ready narrative paragraph |
 
-> "The current model's performance is limited by the small size and potential lack of diversity in the dataset."
+### Before → After examples
 
-**Planned Improvements:**
-- Acquire a larger, more diverse dataset
-- Experiment with different LoRA configurations and other PEFT methods
-- Explore advanced text generation strategies to improve narrative quality and fluency
+| Structured findings (before) | Narrative (after) |
+|------------------------------|-------------------|
+| Churn model AUC=0.87; precision@10%=0.62; top drivers: tenure↓, support tickets↑, plan=Basic; lift vs baseline +31%. | Our churn model now separates likely leavers from stayers with strong discrimination (AUC 0.87) and a 31% lift over the previous rule-based baseline… |
+| Revenue anomaly week 42: −18% vs 8-week MA; Electronics −27%; West −22%; payment failures +9pp. | Week 42 revenue fell 18% below the eight-week moving average, concentrated in Electronics and the West… pointing to a checkout or processor issue… |
+| A/B checkout: variant B; n=42k; conversion 3.4%→3.9%; +14.7%; p=0.008. | Checkout variant B lifted conversion from 3.4% to 3.9% (+14.7% relative) across 42,000 sessions with a statistically significant result… |
+| Q3 forecast: $12.4M (80% PI $11.1–$13.6M); MAPE 6.2%; new logo +$1.1M; churn −$0.4M. | The Q3 revenue forecast centers at $12.4M with an 80% prediction interval of $11.1–$13.6M… |
 
----
+## Repository layout
 
-*Feel free to open issues or contribute to this project!*
+```
+app.py                      # Gradio Data-to-Story Generator
+data/sample_ds_stories.jsonl
+src/prompts.py              # Instruction prompt templates
+src/inference.py            # CPU Flan-T5 (+ optional LoRA) generation
+src/train_lora.py           # CLI LoRA fine-tune on JSONL
+fine_tune_flan_t5_base.ipynb
+tests/test_prompts.py
+docs/hf-space-deploy.md
+```
 
+## Tests
 
+```bash
+pip install -r requirements.txt
+python -m pytest -q
+```
+
+CI runs the same suite on every push/PR (`.github/workflows/ci.yml`). Inference
+tests are mocked so CI stays CPU-light and does not download model weights.
+
+## Limitations
+
+Base Flan-T5 without a task-specific adapter produces generic paraphrases.
+Fine-tune on your own JSONL (or the sample file) for domain voice. Narrative
+quality scales with dataset size and diversity.
